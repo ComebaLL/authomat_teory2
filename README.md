@@ -1,0 +1,2 @@
+# authomat_teory2
+ 
