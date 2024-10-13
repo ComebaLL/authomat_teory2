@@ -3,8 +3,9 @@ from tkinter import messagebox
 
 class PushdownAutomaton:
     def __init__(self):
-        self.stack = []  # стек для хранения долгов
+        self.stack = []  # стек для хранения состояний и долгов
         self.state = 'Счет Закрыт'  # начальное состояние
+        self.stack.append('Счет Закрыт')  # Добавляем состояние в стек
 
     def transition(self, action):
         if self.state == 'Счет Хороший':
@@ -18,10 +19,10 @@ class PushdownAutomaton:
                 self.state = 'Превышены Расходы по Счету'
                 return "Превышены расходы по счету, добавлен долг"
             elif action == 'Счет Закрыт':
+                # Закрываем счет, добавляем это состояние в стек
+                self.stack.append('Счет Закрыт')
                 self.state = 'Счет Закрыт'
                 return "Счет закрыт"
-            elif action == 'Счет Открыт':
-                return "Счет уже открыт"
         
         elif self.state == 'Превышены Расходы по Счету':
             if action == 'Разрешенное Снятие Денег':
@@ -29,23 +30,24 @@ class PushdownAutomaton:
                 self.stack.append('Долг')
                 return "Дополнительное снятие при превышенных расходах"
             elif action == 'Долг Погашен':
-                if self.stack:
-                    self.stack.pop()
-                    if not self.stack:  # Если стек пуст, возвращаемся к "Счет Хороший"
+                if self.stack and 'Долг' in self.stack:
+                    self.stack.remove('Долг')  # Удаляем один долг
+                    if not 'Долг' in self.stack:  # Если долгов больше нет
                         self.state = 'Счет Хороший'
                     return "Долг погашен"
                 else:
                     return "Нет долгов для погашения"
             elif action == 'Счет Закрыт':
+                self.stack.append('Счет Закрыт')
                 self.state = 'Счет Закрыт'
                 return "Счет закрыт"
 
         elif self.state == 'Счет Закрыт':
             if action == 'Счет Открыт':
+                # Открываем счет, добавляем это состояние в стек
+                self.stack.append('Счет Открыт')
                 self.state = 'Счет Хороший'
                 return "Счет открыт, можно выполнять операции"
-            elif action == 'Счет Закрыт':
-                return "Счет уже закрыт"
             else:
                 return "Счет закрыт, операции недоступны"
 
@@ -56,7 +58,7 @@ class PushdownAutomaton:
         return self.stack
 
     def has_debt(self):
-        return bool(self.stack)  # Если в стеке есть элементы, значит есть долг
+        return 'Долг' in self.stack  # Если в стеке есть элемент "Долг"
 
 # GUI с использованием tkinter
 class AutomatonGUI:
@@ -71,8 +73,8 @@ class AutomatonGUI:
         self.state_label = tk.Label(root, text=f"Текущее состояние: {self.automaton.get_state()}")
         self.state_label.pack(pady=10)
         
-        #self.stack_label = tk.Label(root, text=f"Содержимое стека: {self.automaton.get_stack()}")
-        #self.stack_label.pack(pady=10)
+        self.stack_label = tk.Label(root, text=f"Содержимое стека: {self.automaton.get_stack()}")
+        self.stack_label.pack(pady=10)
         
         # Кнопки действий
         self.buttons = {}
@@ -82,7 +84,7 @@ class AutomatonGUI:
         self.update_buttons_visibility()
 
     def create_action_buttons(self):
-        actions = ['Обычное Снятие Денег', 'Вклад', 'Разрешенное Снятие Денег', 'Погасить Долг', 'Счет Открыт', 'Счет Закрыт']
+        actions = ['Обычное Снятие Денег', 'Вклад', 'Разрешенное Снятие Денег', 'Долг Погашен', 'Счет Открыт', 'Счет Закрыт']
         for action in actions:
             button = tk.Button(self.root, text=action, command=lambda a=action: self.perform_action(a))
             self.buttons[action] = button
@@ -94,7 +96,7 @@ class AutomatonGUI:
 
         # Обновляем метки
         self.state_label.config(text=f"Текущее состояние: {self.automaton.get_state()}")
-        self.stack_label.config(text=f"Содержимое стека: {self.automaton.get_stack()}")
+        #self.stack_label.config(text=f"Содержимое стека: {self.automaton.get_stack()}")
 
         # Обновляем видимость кнопок после каждого действия
         self.update_buttons_visibility()
