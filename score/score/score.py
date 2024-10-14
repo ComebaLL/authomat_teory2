@@ -124,5 +124,6 @@ class AutomatonGUI:
 # Запуск GUI приложения
 if __name__ == "__main__":
     root = tk.Tk()
+    root.geometry('520x520')
     app = AutomatonGUI(root)
     root.mainloop()
