@@ -1,4 +1,5 @@
 import requests
+from bisect import bisect_left
 
 class LevenshteinAutomaton:
     def __init__(self, word, max_distance):
@@ -92,21 +93,47 @@ def save_to_dictionary(filepath, dictionary):
         file.write("\n".join(dictionary))
 
 
+def add_word_to_sorted_dictionary(word, filepath):
+    """
+    Добавляет слово в отсортированный словарь и сохраняет изменения.
+    """
+    dictionary = load_dictionary(filepath)
+    if word not in dictionary:
+        from bisect import insort
+        insort(dictionary, word)  # Вставляем слово в отсортированный список
+        save_to_dictionary(filepath, dictionary)
+        print(f"Слово '{word}' добавлено в словарь.")
+    else:
+        print(f"Слово '{word}' уже есть в словаре.")
+
+
 def suggest_word(input_word, dictionary, max_distance):
     """
-    Предлагает варианты замены слова из словаря, основываясь на расстоянии Левенштейна.
+    Предлагает варианты замены слова из словаря, используя оптимизированный поиск.
     """
     suggestions = []
-    for word in dictionary:
+    start_index = bisect_left(dictionary, input_word[:1])  # Начинаем сужение по первой букве
+
+    for word in dictionary[start_index:]:
+        if len(word) > 7:  # Пропускаем слова длиннее 7 символов
+            continue
+
+        if not word.startswith(input_word[:1]):
+            break  # Прекращаем, если слова уже не совпадают по первой букве
+
         lev_automaton = LevenshteinAutomaton(word, max_distance)
         lev_automaton.build_automaton()
         if lev_automaton.match(input_word):
             suggestions.append(word)
+
+        if len(suggestions) >= 5:  # Ограничиваем количество предложений
+            break
+
     return suggestions
 
 
 def main():
-    filepath = "russian.txt"
+    filepath = "sorted_words.txt"
     dictionary = load_dictionary(filepath)
 
     if not dictionary:
@@ -119,15 +146,26 @@ def main():
 
     if suggestions:
         print("Возможно, вы имели в виду:")
-        for suggestion in suggestions:
-            print(f" - {suggestion}")
+        for i, suggestion in enumerate(suggestions, start=1):
+            print(f"{i}. {suggestion}")
+
+        choice = input("Выберите номер слова для замены или введите 0, чтобы оставить своё слово: ").strip()
+        if choice.isdigit():
+            choice = int(choice)
+            if 1 <= choice <= len(suggestions):
+                input_word = suggestions[choice - 1]
+                print(f"Вы выбрали: {input_word}")
+            elif choice == 0:
+                print("Вы оставили своё слово.")
+            else:
+                print("Неверный выбор. Слово оставлено без изменений.")
+        else:
+            print("Некорректный ввод. Слово оставлено без изменений.")
     else:
         print("Совпадений не найдено.")
         add_to_dict = input("Добавить слово в словарь? (да/нет): ").strip().lower()
         if add_to_dict == "да":
-            dictionary.append(input_word)
-            save_to_dictionary(filepath, dictionary)
-            print(f"Слово '{input_word}' добавлено в словарь.")
+            add_word_to_sorted_dictionary(input_word, filepath)
 
 
 if __name__ == "__main__":
