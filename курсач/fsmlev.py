@@ -132,6 +132,39 @@ def suggest_word(input_word, dictionary, max_distance):
     return suggestions
 
 
+def process_input_string(input_string, dictionary, filepath, max_distance):
+    """
+    Обрабатывает строку, проверяя каждое слово через автомат Левенштейна.
+    """
+    words = input_string.split()
+    for word in words:
+        print(f"Проверка слова: {word}")
+        suggestions = suggest_word(word, dictionary, max_distance)
+
+        if suggestions:
+            print("Возможно, вы имели в виду:")
+            for i, suggestion in enumerate(suggestions, start=1):
+                print(f"{i}. {suggestion}")
+
+            choice = input("Выберите номер слова для замены или введите 0, чтобы оставить своё слово: ").strip()
+            if choice.isdigit():
+                choice = int(choice)
+                if 1 <= choice <= len(suggestions):
+                    new_word = suggestions[choice - 1]
+                    print(f"Вы выбрали: {new_word}")
+                elif choice == 0:
+                    print("Вы оставили своё слово.")
+                else:
+                    print("Неверный выбор. Слово оставлено без изменений.")
+            else:
+                print("Некорректный ввод. Слово оставлено без изменений.")
+        else:
+            print("Совпадений не найдено.")
+            add_to_dict = input("Добавить слово в словарь? (да/нет): ").strip().lower()
+            if add_to_dict == "да":
+                add_word_to_sorted_dictionary(word, filepath)
+
+
 def main():
     filepath = "sorted_words.txt"
     dictionary = load_dictionary(filepath)
@@ -139,33 +172,10 @@ def main():
     if not dictionary:
         print("Словарь пуст или отсутствует. Начните добавлять слова.")
 
-    input_word = input("Введите слово: ").strip()
+    input_string = input("Введите строку: ").strip()
     max_distance = 1
 
-    suggestions = suggest_word(input_word, dictionary, max_distance)
-
-    if suggestions:
-        print("Возможно, вы имели в виду:")
-        for i, suggestion in enumerate(suggestions, start=1):
-            print(f"{i}. {suggestion}")
-
-        choice = input("Выберите номер слова для замены или введите 0, чтобы оставить своё слово: ").strip()
-        if choice.isdigit():
-            choice = int(choice)
-            if 1 <= choice <= len(suggestions):
-                input_word = suggestions[choice - 1]
-                print(f"Вы выбрали: {input_word}")
-            elif choice == 0:
-                print("Вы оставили своё слово.")
-            else:
-                print("Неверный выбор. Слово оставлено без изменений.")
-        else:
-            print("Некорректный ввод. Слово оставлено без изменений.")
-    else:
-        print("Совпадений не найдено.")
-        add_to_dict = input("Добавить слово в словарь? (да/нет): ").strip().lower()
-        if add_to_dict == "да":
-            add_word_to_sorted_dictionary(input_word, filepath)
+    process_input_string(input_string, dictionary, filepath, max_distance)
 
 
 if __name__ == "__main__":
