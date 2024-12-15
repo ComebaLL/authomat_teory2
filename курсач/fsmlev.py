@@ -1,5 +1,8 @@
 import requests
 from bisect import bisect_left
+from spellchecker import SpellChecker
+
+spell = SpellChecker(language="ru")  # Инициализация для русского языка
 
 class LevenshteinAutomaton:
     def __init__(self, word, max_distance):
@@ -81,7 +84,7 @@ def load_dictionary(filepath):
         with open(filepath, "r", encoding="windows-1251") as file:
             return file.read().splitlines()
     except FileNotFoundError:
-        print("Файл словаря не найден. Создайте файл russian_words.txt.")
+        print("Файл словаря не найден. Создайте файл sorted_words.txt.")
         return []
 
 
@@ -115,9 +118,6 @@ def suggest_word(input_word, dictionary, max_distance):
     start_index = bisect_left(dictionary, input_word[:1])  # Начинаем сужение по первой букве
 
     for word in dictionary[start_index:]:
-        if len(word) > 7:  # Пропускаем слова длиннее 7 символов
-            continue
-
         if not word.startswith(input_word[:1]):
             break  # Прекращаем, если слова уже не совпадают по первой букве
 
@@ -132,37 +132,41 @@ def suggest_word(input_word, dictionary, max_distance):
     return suggestions
 
 
-def process_input_string(input_string, dictionary, filepath, max_distance):
+def check_spelling_and_suggest(input_word, dictionary, filepath, max_distance):
     """
-    Обрабатывает строку, проверяя каждое слово через автомат Левенштейна.
+    Проверяет слово на грамотность и предлагает варианты замены, если оно некорректно.
     """
-    words = input_string.split()
-    for word in words:
-        print(f"Проверка слова: {word}")
-        suggestions = suggest_word(word, dictionary, max_distance)
+    # Проверяем на грамотность
+    if input_word in spell:  # Слово грамматически верное
+        print(f"Слово '{input_word}' написано корректно.")
+        return
 
-        if suggestions:
-            print("Возможно, вы имели в виду:")
-            for i, suggestion in enumerate(suggestions, start=1):
-                print(f"{i}. {suggestion}")
+    # Если слово некорректное, предлагаются варианты через Левенштейна
+    print(f"Слово '{input_word}' возможно написано с ошибкой.")
+    suggestions = suggest_word(input_word, dictionary, max_distance)
 
-            choice = input("Выберите номер слова для замены или введите 0, чтобы оставить своё слово: ").strip()
-            if choice.isdigit():
-                choice = int(choice)
-                if 1 <= choice <= len(suggestions):
-                    new_word = suggestions[choice - 1]
-                    print(f"Вы выбрали: {new_word}")
-                elif choice == 0:
-                    print("Вы оставили своё слово.")
-                else:
-                    print("Неверный выбор. Слово оставлено без изменений.")
+    if suggestions:
+        print("Возможно, вы имели в виду:")
+        for i, suggestion in enumerate(suggestions, start=1):
+            print(f"{i}. {suggestion}")
+
+        choice = input("Выберите номер слова для замены или введите 0, чтобы оставить своё слово: ").strip()
+        if choice.isdigit():
+            choice = int(choice)
+            if 1 <= choice <= len(suggestions):
+                new_word = suggestions[choice - 1]
+                print(f"Вы выбрали: {new_word}")
+            elif choice == 0:
+                print("Вы оставили своё слово.")
             else:
-                print("Некорректный ввод. Слово оставлено без изменений.")
+                print("Неверный выбор. Слово оставлено без изменений.")
         else:
-            print("Совпадений не найдено.")
-            add_to_dict = input("Добавить слово в словарь? (да/нет): ").strip().lower()
-            if add_to_dict == "да":
-                add_word_to_sorted_dictionary(word, filepath)
+            print("Некорректный ввод. Слово оставлено без изменений.")
+    else:
+        print("Совпадений не найдено.")
+        add_to_dict = input("Добавить слово в словарь? (да/нет): ").strip().lower()
+        if add_to_dict == "да":
+            add_word_to_sorted_dictionary(input_word, filepath)
 
 
 def main():
@@ -172,10 +176,11 @@ def main():
     if not dictionary:
         print("Словарь пуст или отсутствует. Начните добавлять слова.")
 
-    input_string = input("Введите строку: ").strip()
+    input_string = input("Введите слово: ").strip()
     max_distance = 1
 
-    process_input_string(input_string, dictionary, filepath, max_distance)
+    for word in input_string.split():
+        check_spelling_and_suggest(word, dictionary, filepath, max_distance)
 
 
 if __name__ == "__main__":
